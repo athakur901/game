@@ -14,22 +14,12 @@ class Frog {
         const centerX = this.x + this.size / 2;
         const centerY = this.y + this.size / 2;
 
-        if (this.hitAnimation > 0) {
-            // Flash red when hit
-            ctx.fillStyle = this.hitAnimation % 2 === 0 ? '#FF0000' : '#2ecc71';
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, this.size * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-            this.hitAnimation--;
-            return;
-        }
-
         if (this.successAnimation > 0) {
             // Draw sparkle effect
-            const sparkleCount = 8;
-            const radius = this.size * (0.5 + Math.sin(this.successAnimation * 0.2) * 0.1);
+            const sparkleCount = 12;
+            const radius = this.size * (0.6 + Math.sin(this.successAnimation * 0.2) * 0.2);
             ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             
             for (let i = 0; i < sparkleCount; i++) {
                 const angle = (i / sparkleCount) * Math.PI * 2;
@@ -37,18 +27,21 @@ class Frog {
                 const y = centerY + Math.sin(angle) * radius;
                 
                 ctx.beginPath();
-                ctx.moveTo(x - 5, y - 5);
-                ctx.lineTo(x + 5, y + 5);
-                ctx.moveTo(x - 5, y + 5);
-                ctx.lineTo(x + 5, y - 5);
+                ctx.moveTo(x - 8, y - 8);
+                ctx.lineTo(x + 8, y + 8);
+                ctx.moveTo(x - 8, y + 8);
+                ctx.lineTo(x + 8, y - 8);
                 ctx.stroke();
             }
             
             this.successAnimation--;
         }
         
+        const isHit = this.hitAnimation > 0;
+        const hitColor = this.hitAnimation % 2 === 0 ? '#FF0000' : '#2ecc71';
+        
         // Draw legs
-        ctx.fillStyle = '#1a9850';
+        ctx.fillStyle = isHit ? hitColor : '#1a9850';
         // Back legs
         ctx.beginPath();
         ctx.ellipse(this.x + this.size * 0.2, this.y + this.size * 0.8, this.size * 0.2, this.size * 0.15, 0, 0, Math.PI * 2);
@@ -65,7 +58,7 @@ class Frog {
         ctx.fill();
 
         // Draw body
-        ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = isHit ? hitColor : '#2ecc71';
         ctx.beginPath();
         ctx.arc(centerX, centerY, this.size * 0.4, 0, Math.PI * 2);
         ctx.fill();
@@ -87,6 +80,10 @@ class Frog {
         ctx.arc(centerX - eyeOffset, centerY - eyeOffset, pupilSize, 0, Math.PI * 2);
         ctx.arc(centerX + eyeOffset, centerY - eyeOffset, pupilSize, 0, Math.PI * 2);
         ctx.fill();
+
+        if (this.hitAnimation > 0) {
+            this.hitAnimation--;
+        }
     }
 
     move(direction) {
