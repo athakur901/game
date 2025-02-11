@@ -5,26 +5,87 @@ class Frog {
         this.size = size;
         this.game = game;
         this.color = '#2ecc71';
+        this.isHit = false;
+        this.hitAnimation = 0;
+        this.successAnimation = 0;
     }
 
     draw(ctx) {
-        // Draw frog body
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.size, this.size);
+        const centerX = this.x + this.size / 2;
+        const centerY = this.y + this.size / 2;
+
+        if (this.hitAnimation > 0) {
+            // Flash red when hit
+            ctx.fillStyle = this.hitAnimation % 2 === 0 ? '#FF0000' : '#2ecc71';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, this.size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            this.hitAnimation--;
+            return;
+        }
+
+        if (this.successAnimation > 0) {
+            // Draw sparkle effect
+            const sparkleCount = 8;
+            const radius = this.size * (0.5 + Math.sin(this.successAnimation * 0.2) * 0.1);
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < sparkleCount; i++) {
+                const angle = (i / sparkleCount) * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                ctx.beginPath();
+                ctx.moveTo(x - 5, y - 5);
+                ctx.lineTo(x + 5, y + 5);
+                ctx.moveTo(x - 5, y + 5);
+                ctx.lineTo(x + 5, y - 5);
+                ctx.stroke();
+            }
+            
+            this.successAnimation--;
+        }
         
-        // Draw eyes
-        ctx.fillStyle = '#000000';
-        const eyeSize = this.size / 6;
-        const eyeOffset = this.size / 4;
-        
-        // Left eye
+        // Draw legs
+        ctx.fillStyle = '#1a9850';
+        // Back legs
         ctx.beginPath();
-        ctx.arc(this.x + eyeOffset, this.y + eyeOffset, eyeSize/2, 0, Math.PI * 2);
+        ctx.ellipse(this.x + this.size * 0.2, this.y + this.size * 0.8, this.size * 0.2, this.size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.size * 0.8, this.y + this.size * 0.8, this.size * 0.2, this.size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Front legs
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.size * 0.25, this.y + this.size * 0.3, this.size * 0.2, this.size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.size * 0.75, this.y + this.size * 0.3, this.size * 0.2, this.size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw body
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, this.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw eyes
+        ctx.fillStyle = '#ffffff';
+        const eyeSize = this.size * 0.15;
+        const eyeOffset = this.size * 0.15;
+        // Eye whites
+        ctx.beginPath();
+        ctx.arc(centerX - eyeOffset, centerY - eyeOffset, eyeSize, 0, Math.PI * 2);
+        ctx.arc(centerX + eyeOffset, centerY - eyeOffset, eyeSize, 0, Math.PI * 2);
         ctx.fill();
         
-        // Right eye
+        // Eye pupils
+        ctx.fillStyle = '#000000';
+        const pupilSize = eyeSize * 0.5;
         ctx.beginPath();
-        ctx.arc(this.x + this.size - eyeOffset, this.y + eyeOffset, eyeSize/2, 0, Math.PI * 2);
+        ctx.arc(centerX - eyeOffset, centerY - eyeOffset, pupilSize, 0, Math.PI * 2);
+        ctx.arc(centerX + eyeOffset, centerY - eyeOffset, pupilSize, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -60,6 +121,7 @@ class Frog {
         // Check if frog reached the top safe zone
         if (this.y <= this.game.cellSize && this.y >= 0) {
             this.game.score++;
+            this.successAnimation = 30; // Number of frames for success animation
             this.reset();
             document.getElementById('score').textContent = this.game.score;
         }
@@ -120,10 +182,21 @@ class Car {
     }
 
     collidesWith(frog) {
-        return !(this.x + this.width < frog.x ||
-                this.x > frog.x + frog.size ||
-                this.y + this.height < frog.y ||
-                this.y > frog.y + frog.size);
+        // Get frog's center point and radius
+        const frogCenterX = frog.x + frog.size / 2;
+        const frogCenterY = frog.y + frog.size / 2;
+        const frogRadius = frog.size * 0.4; // Same as body radius in draw method
+
+        // Find closest point on car to frog center
+        const closestX = Math.max(this.x, Math.min(frogCenterX, this.x + this.width));
+        const closestY = Math.max(this.y, Math.min(frogCenterY, this.y + this.height));
+
+        // Calculate distance between closest point and frog center
+        const distanceX = frogCenterX - closestX;
+        const distanceY = frogCenterY - closestY;
+        const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+        return distanceSquared < (frogRadius * frogRadius);
     }
 }
 
@@ -156,6 +229,11 @@ class Game {
         
         // Bind event listeners
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        document.getElementById('gameOver').addEventListener('click', () => {
+            if (this.gameOver) {
+                this.reset();
+            }
+        });
         
         // Start game loop
         this.gameLoop();
@@ -188,6 +266,7 @@ class Game {
             this.gameOver = true;
             document.getElementById('gameOver').classList.remove('hidden');
         } else {
+            this.frog.hitAnimation = 10; // Number of frames for hit animation
             this.frog.reset();
         }
     }
@@ -235,20 +314,40 @@ class Game {
     initializeCars() {
         const carWidth = this.cellSize * 1.5;
         const carHeight = this.cellSize * 0.8;
-        const carsPerLane = 4;
+        const carsPerLane = 2;
+        const minGap = carWidth * 2; // Minimum gap between cars in the same lane
         
         for (let lane = 0; lane < this.numLanes; lane++) {
             const y = this.cellSize + (lane * this.cellSize) + (this.cellSize - carHeight) / 2;
             const direction = lane % 2 === 0 ? 1 : -1;
-            const speed = 1.5 + (lane % 3); // Slightly slower base speed
+            // Slower speeds for each lane type
+            let speed;
+            switch (lane % 3) {
+                case 0:
+                    speed = 0.8; // Slow lanes
+                    break;
+                case 1:
+                    speed = 1.2; // Medium lanes
+                    break;
+                case 2:
+                    speed = 1.6; // Fast lanes
+                    break;
+            }
             
+            // Generate random positions for cars in this lane
+            const positions = [];
             for (let i = 0; i < carsPerLane; i++) {
-                const spacing = 600 / (carsPerLane - 0.5); // Add some extra space between cars
-                let x = i * spacing;
-                // For cars moving left, start from the right side
+                let x;
+                do {
+                    x = Math.random() * (600 - carWidth); // Random position within canvas width
+                } while (positions.some(pos => Math.abs(pos - x) < minGap)); // Ensure minimum gap
+                positions.push(x);
+                
+                // For cars moving left, adjust their initial position
                 if (direction < 0) {
-                    x = 600 - (i * spacing);
+                    x = 600 - x - carWidth;
                 }
+                
                 this.cars.push(new Car(x, y, carWidth, carHeight, speed, direction));
             }
         }
